@@ -11,6 +11,7 @@ import Button from '../../../components/Button';
 import Text from '../../../components/Text';
 import compose from '../../../libs/compose';
 import withLocalize, {withLocalizePropTypes} from '../../../components/withLocalize';
+import {withNetwork} from '../../../components/OnyxProvider';
 import ONYXKEYS from '../../../ONYXKEYS';
 import CONST from '../../../CONST';
 import * as Expensicons from '../../../components/Icon/Expensicons';
@@ -120,7 +121,11 @@ class PaymentMethodList extends Component {
     getFilteredPaymentMethods() {
         // Hide any billing cards that are not P2P debit cards for now because you cannot make them your default method, or delete them
         const filteredCardList = _.filter(this.props.cardList, card => card.accountData.additionalData.isP2PDebitCard);
-        let combinedPaymentMethods = PaymentUtils.formatPaymentMethods(this.props.bankAccountList, filteredCardList, this.props.payPalMeData);
+        let combinedPaymentMethods = _.filter(PaymentUtils.formatPaymentMethods(this.props.bankAccountList, filteredCardList, this.props.payPalMeData), paymentMethod => (
+            this.props.network.isOffline
+            || paymentMethod.pendingAction !== CONST.RED_BRICK_ROAD_PENDING_ACTION.DELETE
+            || !_.isEmpty(paymentMethod.errors)
+        ));
 
         if (!_.isEmpty(this.props.filterType)) {
             combinedPaymentMethods = _.filter(combinedPaymentMethods, paymentMethod => paymentMethod.accountType === this.props.filterType);
@@ -258,6 +263,7 @@ PaymentMethodList.defaultProps = defaultProps;
 
 export default compose(
     withLocalize,
+    withNetwork(),
     withOnyx({
         bankAccountList: {
             key: ONYXKEYS.BANK_ACCOUNT_LIST,
